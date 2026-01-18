@@ -786,12 +786,96 @@ function handleSwipe(dx, dy) {
     }
 }
 
+
+// ... (tutto il codice precedente rimane uguale fino a handleSwipe) ...
+
+function handleSwipe(dx, dy) {
+    if (Math.abs(dx) < 30 && Math.abs(dy) < 30) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+        player.dir = { x: dx > 0 ? 1 : -1, y: 0 };
+    } else {
+        player.dir = { x: 0, y: dy > 0 ? 1 : -1 };
+    }
+}
+
+// ... (tutto il codice precedente rimane uguale fino a handleSwipe) ...
+
+function handleSwipe(dx, dy) {
+    if (Math.abs(dx) < 30 && Math.abs(dy) < 30) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+        player.dir = { x: dx > 0 ? 1 : -1, y: 0 };
+    } else {
+        player.dir = { x: 0, y: dy > 0 ? 1 : -1 };
+    }
+}
+
+// --- GESTIONE AVVIO E CARICAMENTO ---
+const loadingScreen = document.getElementById('loading-screen');
+const loadingBar = document.getElementById('loading-bar');
+const loadingText = document.getElementById('loading-text');
+const startBtn = document.getElementById('start-game-btn');
+const loadingBarContainer = document.getElementById('loading-bar-container');
+
 function startGame() {
     resizeCanvases();
     initGame(1, true);
+    
+    // --- AUTO MOVE: Il pallone parte subito verso l'alto ---
+    player.dir = {x: 0, y: -1}; 
+    
+    // Doppio check resize per sicurezza su mobile
     setTimeout(resizeCanvases, 100);
-    setTimeout(resizeCanvases, 500);
 }
 
-window.addEventListener('load', startGame);
+// Simulazione caricamento assets
+let loadProgress = 0;
+const loadInterval = setInterval(() => {
+    loadProgress += Math.random() * 15; // Incremento random
+    if(loadProgress > 100) loadProgress = 100;
+    
+    loadingBar.style.width = loadProgress + "%";
+    
+    if(loadProgress >= 100) {
+        clearInterval(loadInterval);
+        onLoadComplete();
+    }
+}, 100); 
+
+// Assicuriamoci che anche la pagina sia pronta
+window.addEventListener('load', () => {
+    loadProgress = 90; 
+});
+
+function onLoadComplete() {
+    // CAMBIO TESTO QUI
+    loadingText.innerText = "GIOCO CARICATO";
+    loadingText.style.color = "#00ff00";
+    loadingBar.style.width = "100%";
+    
+    // Nascondi barra, mostra bottone
+    setTimeout(() => {
+        loadingBarContainer.style.display = 'none';
+        startBtn.style.display = 'inline-block';
+    }, 500);
+}
+
+// Click su PLAY
+startBtn.addEventListener('click', () => {
+    // 1. Sblocca Audio Context
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume().then(() => {
+            console.log("Audio Context Resumed");
+        });
+    }
+    
+    // 2. Dissolvenza Schermata
+    loadingScreen.style.opacity = '0';
+    
+    // 3. Avvia Gioco
+    setTimeout(() => {
+        loadingScreen.style.display = 'none';
+        startGame();
+    }, 500);
+});
+
 window.addEventListener('resize', resizeCanvases);
