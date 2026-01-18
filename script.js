@@ -1,4 +1,4 @@
-/* script.js - v2.5: PERFORMANCE EDITION (No Lag & Preloading) */
+/* script.js - v2.6: CHAOS EDITION (Random Skins & Red Spiders) */
 
 // 1. SUPABASE
 const SUPABASE_URL = 'https://rhttiiwsouqnlwoqpcvb.supabase.co';
@@ -17,6 +17,21 @@ const MAX_TIME_BONUS = 500;
 const POINTS_PER_FILL = 10;    
 
 const CELL_UNCLAIMED = 0; const CELL_CLAIMED = 1; const CELL_STIX = 2;
+
+// --- NUOVO: SISTEMA SKIN CASUALI ---
+const SKINS = [
+    { name: "CLASSIC",   primary: '#ffff00', secondary: '#ffaa00', trail: '#00ffff' }, // Giallo/Azzurro
+    { name: "MATRIX",    primary: '#00ff00', secondary: '#003300', trail: '#008800' }, // Tutto Verde
+    { name: "INFERNO",   primary: '#ff3300', secondary: '#ffaa00', trail: '#ff0000' }, // Fuoco
+    { name: "ICE",       primary: '#ffffff', secondary: '#aaccff', trail: '#0088ff' }, // Ghiaccio
+    { name: "CYBERPUNK", primary: '#ff00ff', secondary: '#00ffff', trail: '#ffff00' }, // Neon
+    { name: "GOLD",      primary: '#ffd700', secondary: '#ffcc00', trail: '#ffffff' }  // Oro
+];
+let currentSkin = SKINS[0];
+
+// --- NUOVO: GENERATORE NOMI MISSIONE ---
+const MISSION_PREFIX = ["OPERATION", "PROTOCOL", "PROJECT", "INITIATIVE", "CODE"];
+const MISSION_SUFFIX = ["OMEGA", "ZERO", "GHOST", "NEON", "STORM", "PHANTOM", "ECHO"];
 
 // DOM
 const imageCanvas = document.getElementById('imageCanvas');
@@ -41,10 +56,8 @@ const musicBtn = document.getElementById('music-btn');
 let isMusicOn = true; 
 
 // VARIABILI STATO
-// OTTIMIZZAZIONE: Cache Immagini
 const levelImages = []; 
-let currentBgImage = null; // Immagine livello corrente
-
+let currentBgImage = null; 
 let grid = new Uint8Array(W * H);
 let stixList = []; 
 let lives = START_LIVES;
@@ -66,25 +79,23 @@ let player = { x: Math.floor(W/2), y: H-1, drawing: false, dir: {x:0,y:0} };
 let qixList = []; 
 
 // Contexts
-let imgCtx = imageCanvas.getContext('2d', { alpha: false }); // Alpha false per performance
+let imgCtx = imageCanvas.getContext('2d', { alpha: false }); 
 let gridCtx = gridCanvas.getContext('2d');
 let entCtx = entityCanvas.getContext('2d');
 
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = new AudioContext();
 
-// --- PRELOADING IMMAGINI ---
-// Carica tutte le immagini all'avvio per evitare lag dopo
+// --- PRELOADING ---
 function preloadLevelImages() {
     for (let i = 1; i <= MAX_LEVEL; i++) {
         const img = new Image();
         img.src = `img${i}.png`;
-        // Fallback banale per jpg se png fallisce (gestito in initGame per sicurezza, qui precarichiamo)
         levelImages[i] = img;
     }
 }
 
-// --- FUNZIONI AUDIO ---
+// --- AUDIO ---
 function playSound(type) {
     if (audioCtx.state === 'suspended') { audioCtx.resume(); }
     const osc = audioCtx.createOscillator();
@@ -128,27 +139,18 @@ if(musicBtn) {
     });
 }
 
-// --- GRAFICA OTTIMIZZATA ---
-// Ridisegna SOLO i layer statici (Sfondo e Griglia Nera)
+// --- GRAFICA STATIC LAYERS ---
 function redrawStaticLayers() {
     if (!currentBgImage) return;
-
-    // 1. Disegna Sfondo (ImageCanvas)
     imgCtx.drawImage(currentBgImage, 0, 0, imageCanvas.width, imageCanvas.height);
 
-    // 2. Ricostruisce la Griglia (GridCanvas)
-    // Invece di disegnare ogni frame, puliamo tutto e ridisegnamo la maschera nera
     gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-    
-    // Riempi tutto di nero
     gridCtx.fillStyle = 'black';
     gridCtx.fillRect(0, 0, gridCanvas.width, gridCanvas.height);
 
-    // "Taglia" i buchi dove è CLAIMED
     let rectSizeX = Math.ceil(scaleX);
     let rectSizeY = Math.ceil(scaleY);
 
-    // Usiamo globalCompositeOperation per "cancellare" disegnando
     gridCtx.globalCompositeOperation = 'destination-out';
     gridCtx.beginPath();
     for(let y=0; y<H; y++){ 
@@ -159,7 +161,7 @@ function redrawStaticLayers() {
         }
     }
     gridCtx.fill();
-    gridCtx.globalCompositeOperation = 'source-over'; // Rimetti normale
+    gridCtx.globalCompositeOperation = 'source-over'; 
 }
 
 function resizeCanvases() {
@@ -171,10 +173,7 @@ function resizeCanvases() {
     });
     scaleX = imageCanvas.width / W;
     scaleY = imageCanvas.height / H;
-    
-    // Quando ridimensioni, devi ridisegnare i layer statici
     redrawStaticLayers();
-    
     if(isVictory) drawVictory(); 
 }
 
@@ -183,11 +182,8 @@ function inBounds(x,y){ return x>=0 && x<W && y>=0 && y<H; }
 
 function initGrid(){
     grid.fill(CELL_UNCLAIMED);
-    // Bordi già claimed
     for(let x=0;x<W;x++){ grid[idx(x,0)] = CELL_CLAIMED; grid[idx(x,H-1)] = CELL_CLAIMED; }
     for(let y=0;y<H;y++){ grid[idx(0,y)] = CELL_CLAIMED; grid[idx(W-1,y)] = CELL_CLAIMED; }
-    
-    // Forza il ridisegno della griglia nera
     redrawStaticLayers();
 }
 
@@ -195,10 +191,26 @@ function spawnFloatingText(text, x, y, size = 24, color = 'white', duration = 15
     floatingTexts.push({text, x, y, timer: duration, opacity: 1.0, size, color});
 }
 
+function pickRandomSkin() {
+    const randomIndex = Math.floor(Math.random() * SKINS.length);
+    currentSkin = SKINS[randomIndex];
+    console.log("Skin selezionata:", currentSkin.name);
+}
+
+function generateMissionName() {
+    const p = MISSION_PREFIX[Math.floor(Math.random() * MISSION_PREFIX.length)];
+    const s = MISSION_SUFFIX[Math.floor(Math.random() * MISSION_SUFFIX.length)];
+    return `${p}: ${s}`;
+}
+
 function initGame(lvl, resetLives = true){
     if(gameOverScreen) gameOverScreen.classList.add('hidden');
     level = lvl;
-    if (resetLives) { lives = START_LIVES; score = 0; }
+    if (resetLives) { 
+        lives = START_LIVES; 
+        score = 0; 
+        pickRandomSkin(); // Nuova skin a ogni partita
+    }
     
     levelStartTime = Date.now();
     flashList = []; particles = []; floatingTexts = [];
@@ -208,19 +220,16 @@ function initGame(lvl, resetLives = true){
     if(nextLevelContainer) nextLevelContainer.style.display = 'none'; 
     gameWrapper.style.cursor = 'none';
 
-    // Gestione Immagine
     let imgSource = `img${level}.png`;
     currentBgImage = new Image();
     currentBgImage.src = imgSource;
-    currentBgImage.onload = () => { 
-        redrawStaticLayers(); 
-    };
+    currentBgImage.onload = () => { redrawStaticLayers(); };
     currentBgImage.onerror = () => { 
-        currentBgImage.src = `img${level}.jpg`; // Fallback
+        currentBgImage.src = `img${level}.jpg`; 
         currentBgImage.onload = () => redrawStaticLayers();
     };
 
-    initGrid(); // Questo resetta la griglia logica e grafica
+    initGrid(); 
     stixList = [];
     player.x = Math.floor(W/2); player.y = H-1;
     player.drawing = false; 
@@ -245,7 +254,12 @@ function initGame(lvl, resetLives = true){
     updateUI();
     tryPlayMusic(); 
 
-    if(level === 7) spawnFloatingText("FINAL STAGE!", W/2, H/2 - 10, 35, '#ff0000', 3000);
+    // --- RANDOM MISSION START ---
+    if(level === 1) {
+        spawnFloatingText(generateMissionName(), W/2, H/2, 30, currentSkin.primary, 2500);
+        spawnFloatingText(`SKIN: ${currentSkin.name}`, W/2, H/2 + 20, 16, '#888', 2000);
+    }
+    else if(level === 7) spawnFloatingText("FINAL STAGE!", W/2, H/2 - 10, 35, '#ff0000', 3000);
     else if (level === 8) {
         spawnFloatingText("MISSION", W/2, H/2 - 15, 30, '#ff0000', 3000);
         spawnFloatingText("IMPOSSIBLE", W/2, H/2 + 5, 30, '#ff0000', 3000);
@@ -271,30 +285,33 @@ function getClaimPercent(){
 function addShake(amount) { shakeIntensity = amount; }
 
 function spawnParticles(x, y, type) {
-    // OTTIMIZZAZIONE: Meno particelle su mobile
     let count = 1; 
-    if (type === 'explosion') count = 30; // Ridotto da 50
-    else if (type === 'fill_spark') count = 4; 
-    else if (type === 'player') count = 1; // Ridotto da 2
+    let pColor = '#fff';
+
+    if (type === 'explosion') count = 30; 
+    else if (type === 'fill_spark') { count = 4; pColor = currentSkin.trail; }
+    else if (type === 'player') { count = 1; pColor = Math.random() > 0.5 ? currentSkin.primary : currentSkin.secondary; }
+    else if (type === 'spider') {
+        // RAGNI ROSSI DAL LIVELLO 6
+        if(level >= 6) {
+            pColor = Math.random() > 0.5 ? '#ff0000' : '#880000'; // Rosso puro
+        } else {
+            pColor = Math.random() > 0.5 ? '#ff0055' : '#aa00ff'; // Viola classico
+        }
+    }
     
     for(let i=0; i<count; i++){
         let p = {
             x: x + (Math.random() - 0.5) * 0.8, y: y + (Math.random() - 0.5) * 0.8,
             vx: (Math.random() - 0.5) * 0.2, vy: (Math.random() - 0.5) * 0.2,
-            life: 1.0, decay: 0.08 + Math.random() * 0.05, color: '#fff'
+            life: 1.0, decay: 0.08 + Math.random() * 0.05, 
+            color: (type === 'explosion') ? (Math.random()>0.3?'#ff2200':'#ffffff') : pColor
         };
-        if(type === 'player') p.color = Math.random() > 0.5 ? '#ffff00' : '#ffaa00';
-        else if (type === 'spider') p.color = Math.random() > 0.5 ? '#ff0055' : '#aa00ff'; 
-        else if (type === 'explosion') {
-            const angle = Math.random() * Math.PI * 2; const speed = Math.random() * 2.5; 
-            p.vx = Math.cos(angle) * speed; p.vy = Math.sin(angle) * speed;
-            p.decay = 0.02 + Math.random() * 0.03; p.color = Math.random() > 0.3 ? '#ff2200' : '#ffffff'; 
-        } else if (type === 'fill_spark') { p.color = '#00ffff'; p.vx *= 2; p.vy *= 2; }
+        if(type === 'fill_spark') { p.vx *= 2; p.vy *= 2; }
         particles.push(p);
     }
 }
 
-// --- MAIN DRAW LOOP (OTTIMIZZATO) ---
 function draw() {
     let offsetX = 0, offsetY = 0;
     if (shakeIntensity > 0) {
@@ -302,29 +319,23 @@ function draw() {
         shakeIntensity *= 0.9; if(shakeIntensity < 0.5) shakeIntensity = 0;
     }
     
-    // OTTIMIZZAZIONE: Puliamo SOLO il canvas delle entità (gli altri sono statici)
     entCtx.setTransform(1, 0, 0, 1, 0, 0); 
     entCtx.clearRect(0,0,entityCanvas.width,entityCanvas.height); 
     entCtx.translate(offsetX, offsetY);
     
-    // Applichiamo shake anche agli altri canvas solo tramite traslazione (senza ridisegnare)
-    // Nota: Per semplicità di ottimizzazione, lo shake muove solo le entità ora, 
-    // oppure dovremmo ridisegnare tutto. Per performance, shakiamo solo entCtx o CSS.
-    // CSS Shake è meglio per performance globale, ma qui teniamo entCtx shake.
-
     let rectSizeX = Math.ceil(scaleX), rectSizeY = Math.ceil(scaleY);
 
-    // 1. Disegno Stix (Linea Giocatore) - ORA SU ENTITY CANVAS
+    // Stix (Usa colore SKIN)
     if(stixList.length > 0){
-        const pulse = Math.sin(Date.now() / 50) > 0 ? '#ffffff' : '#00ffff';
+        // Pulsazione tra bianco e colore trail della skin
+        const pulse = Math.sin(Date.now() / 50) > 0 ? '#ffffff' : currentSkin.trail;
         entCtx.fillStyle = pulse; entCtx.beginPath();
         for(let p of stixList){ entCtx.rect(Math.floor(p.x*scaleX), Math.floor(p.y*scaleY), rectSizeX, rectSizeY); }
-        entCtx.fill(); entCtx.shadowColor = '#00ffff'; entCtx.shadowBlur = 10; 
-        // entCtx.stroke(); // Stroke pesante, tolto per performance
+        entCtx.fill(); 
+        entCtx.shadowColor = currentSkin.trail; entCtx.shadowBlur = 10; 
         entCtx.shadowBlur = 0; 
     }
 
-    // 2. Flash Effect (Ora su ENTITY CANVAS)
     if(flashList.length > 0) {
         entCtx.save(); entCtx.fillStyle = 'white'; entCtx.shadowColor = 'white'; entCtx.shadowBlur = 20; entCtx.beginPath();
         for (let i = flashList.length - 1; i >= 0; i--) {
@@ -337,34 +348,46 @@ function draw() {
     }
 
     if (isPlaying) {
-        // Particelle
         for(let i = particles.length - 1; i >= 0; i--){
             let p = particles[i]; entCtx.fillStyle = p.color; entCtx.globalAlpha = p.life;
             entCtx.fillRect(p.x * scaleX, p.y * scaleY, scaleX, scaleY);
             entCtx.globalAlpha = 1.0; p.x += p.vx; p.y += p.vy; p.vx *= 0.95; p.vy *= 0.95; p.life -= p.decay;
             if(p.life <= 0) particles.splice(i, 1);
         }
-        // Nemici
+        
+        // DISEGNO RAGNI
         for (let q of qixList) {
             entCtx.save(); entCtx.translate((q.x + 0.5) * scaleX, (q.y + 0.5) * scaleY);
             let angle = Math.atan2(q.vy, q.vx); entCtx.rotate(angle + Math.PI / 2);
-            if(isDying) { entCtx.shadowColor = 'red'; entCtx.shadowBlur = 20; }
+            
+            // LOGICA RAGNI ROSSI
+            if(isDying) { 
+                entCtx.shadowColor = 'red'; entCtx.shadowBlur = 20; 
+            } else if (level >= 6) {
+                // AURA ROSSA DEMONIACA
+                entCtx.shadowColor = '#ff0000'; entCtx.shadowBlur = 20; 
+            }
+
             entCtx.font = `${Math.min(scaleX, scaleY) * 7.5}px serif`; entCtx.textAlign = 'center'; entCtx.textBaseline = 'middle';
             entCtx.fillText('🕷️', 0, 0); entCtx.restore();
         }
-        // Giocatore
+
+        // DISEGNO GIOCATORE
         if (isDying) playerAnimScale = Math.max(0, playerAnimScale - 0.1); else playerAnimScale = Math.min(1, playerAnimScale + 0.05); 
         if(playerAnimScale > 0.01) {
             entCtx.save(); entCtx.translate((player.x + 0.5) * scaleX, (player.y + 0.5) * scaleY);
             entCtx.scale(playerAnimScale, playerAnimScale);
             if (!isDying && (player.dir.x !== 0 || player.dir.y !== 0)) playerAngle += (Math.random() - 0.5) * 1.5; 
             entCtx.rotate(playerAngle);
+            
             const blinkPhase = Math.sin((Date.now() / 500) * Math.PI); const glowBlur = 10 + 10 * Math.abs(blinkPhase); 
-            entCtx.shadowColor = '#00ffff'; entCtx.shadowBlur = glowBlur;
+            // Usa colore SKIN
+            entCtx.shadowColor = currentSkin.trail; entCtx.shadowBlur = glowBlur;
+            
             entCtx.font = `${Math.min(scaleX, scaleY) * 5.5}px sans-serif`; entCtx.textAlign = 'center'; entCtx.textBaseline = 'middle';
             entCtx.fillText('⚽', 0, 0); entCtx.restore(); 
         }
-        // Testi
+        
         for(let i = floatingTexts.length - 1; i >= 0; i--){
             let ft = floatingTexts[i]; entCtx.save(); let color = ft.color || 'white'; entCtx.fillStyle = color; entCtx.globalAlpha = ft.opacity;
             let fontSize = ft.size || 24; entCtx.font = `bold ${fontSize}px 'Orbitron', sans-serif`; entCtx.textAlign = 'center'; entCtx.shadowColor = color; entCtx.shadowBlur = 10;
@@ -402,12 +425,9 @@ function closeStixAndFill(){
         }
     }
     
-    // OTTIMIZZAZIONE GRID:
-    // Invece di ridisegnare tutta la griglia ogni frame, 
-    // aggiorniamo solo le parti che sono diventate CLAIMED ora.
     let filled = 0;
     
-    gridCtx.globalCompositeOperation = 'destination-out'; // Modalità "Gomma da cancellare"
+    gridCtx.globalCompositeOperation = 'destination-out'; 
     gridCtx.beginPath();
     let rectSizeX = Math.ceil(scaleX);
     let rectSizeY = Math.ceil(scaleY);
@@ -415,7 +435,6 @@ function closeStixAndFill(){
     for(let i=0; i<grid.length; i++){
         if(grid[i]===CELL_UNCLAIMED && !visited[i]){ 
             grid[i] = CELL_CLAIMED; filled++; flashList.push({idx: i, timer: 15}); 
-            // Cancella questo blocco dalla maschera nera
             let x = i % W; let y = Math.floor(i / W);
             gridCtx.rect(Math.floor(x*scaleX), Math.floor(y*scaleY), rectSizeX, rectSizeY);
         }
@@ -426,7 +445,7 @@ function closeStixAndFill(){
         }
     }
     gridCtx.fill();
-    gridCtx.globalCompositeOperation = 'source-over'; // Torna normale
+    gridCtx.globalCompositeOperation = 'source-over'; 
 
     stixList = []; 
     if(filled > 0) {
@@ -470,14 +489,12 @@ function resetAfterDeath(){
                 vy: (Math.random() * 0.8 + 0.4) * (Math.random() < 0.5 ? -1 : 1)
             });
         }
-        // Ripristina stix cancellati sulla griglia (ridisegna il nero)
         gridCtx.fillStyle = 'black';
         gridCtx.beginPath();
         let rectSizeX = Math.ceil(scaleX), rectSizeY = Math.ceil(scaleY);
         for(let i=0; i<grid.length; i++) {
             if(grid[i]===CELL_STIX) {
                 grid[i] = CELL_UNCLAIMED;
-                // Ricolora di nero i pezzi che stavi disegnando
                 let x = i % W; let y = Math.floor(i / W);
                 gridCtx.rect(Math.floor(x*scaleX), Math.floor(y*scaleY), rectSizeX, rectSizeY);
             }
@@ -505,7 +522,6 @@ function winLevel() {
     let timeBonus = Math.max(0, MAX_TIME_BONUS - Math.floor(timeTakenSeconds * 5));
     score += (levelScore + timeBonus);
     
-    // Riempi tutto visualmente (pulisci il nero)
     grid.fill(CELL_CLAIMED); 
     gridCtx.clearRect(0,0,gridCanvas.width, gridCanvas.height);
     
