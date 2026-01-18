@@ -187,7 +187,7 @@ function initGrid(){
     redrawStaticLayers();
 }
 
-function spawnFloatingText(text, x, y, size = 24, color = 'white', duration = 2500) {
+function spawnFloatingText(text, x, y, size = 24, color = 'white', duration = 3500) {
     floatingTexts.push({text, x, y, timer: duration, opacity: 1.0, size, color});
 }
 
@@ -695,4 +695,5 @@ if(startBtn) {
     });
 }
 window.addEventListener('resize', resizeCanvases);
+
 
