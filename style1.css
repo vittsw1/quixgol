@@ -416,3 +416,100 @@ canvas {
     padding: 5px 0;
     border-bottom: 1px dotted #333;
 }
+
+
+/* --- AGGIUNTE PER LA CLASSIFICA (Incolla alla fine del tuo CSS) --- */
+
+.hidden {
+    display: none !important;
+}
+
+#game-over-screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 85%;
+    max-width: 350px;
+    background-color: rgba(0, 0, 0, 0.95);
+    border: 2px solid #00f3ff; /* Usa il colore primary del tuo tema */
+    color: white;
+    padding: 20px;
+    text-align: center;
+    border-radius: 10px;
+    box-shadow: 0 0 30px rgba(0, 243, 255, 0.3);
+    z-index: 2000; /* Molto alto per stare sopra a tutto */
+    font-family: 'Orbitron', sans-serif;
+}
+
+#end-title {
+    font-size: 2em;
+    margin: 0 0 10px 0;
+    text-shadow: 0 0 10px currentColor;
+}
+
+.final-score-text {
+    font-size: 1.2em;
+    margin-bottom: 20px;
+}
+
+#player-name {
+    padding: 10px;
+    font-size: 16px;
+    width: 60%;
+    text-transform: uppercase;
+    background: #222;
+    color: #00f3ff;
+    border: 1px solid #00f3ff;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-family: 'Orbitron', sans-serif;
+    text-align: center;
+}
+
+#btn-save, #btn-retry {
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: #00f3ff;
+    color: black;
+    border: none;
+    font-weight: bold;
+    margin-top: 10px;
+    font-family: 'Orbitron', sans-serif;
+    text-transform: uppercase;
+    border-radius: 5px;
+}
+
+#btn-save:disabled {
+    background-color: #555;
+    cursor: wait;
+}
+
+#leaderboard-container {
+    margin-top: 15px;
+    text-align: left;
+    max-height: 150px;
+    overflow-y: auto;
+    border-top: 1px solid #333;
+    padding-top: 10px;
+    font-size: 0.9em;
+}
+
+#leaderboard-container h3 {
+    text-align: center;
+    margin-top: 0;
+    color: #ff0055; /* Danger color del tuo tema */
+}
+
+#leaderboard-list {
+    list-style: none;
+    padding: 0;
+}
+
+#leaderboard-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px dotted #333;
+}

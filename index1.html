@@ -2,39 +2,96 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Space Shooter - Leaderboard</title>
-    <link rel="stylesheet" href="style1.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QUIXGOL - Leaderboard Edition</title>
     
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style1.css">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div id="game-container">
-        <div id="ui-layer">
-            <div id="score">Punti: 0</div>
-            <div id="level">Livello: 1</div>
-        </div>
-        
-        <div id="game-over-screen" class="hidden">
-            <h1 id="end-title">GAME OVER</h1>
-            <p class="final-score-text">Punteggio finale: <span id="final-score-val">0</span></p>
-            
-            <div id="input-section" class="hidden">
-                <p style="color: yellow;">Nuovo Record! Entri in Top 10!</p>
-                <input type="text" id="player-name" maxlength="8" placeholder="Tuo Nome (Max 8)" />
-                <button id="btn-save" onclick="salvaPunteggio()">Salva in Classifica</button>
-            </div>
 
-            <div id="leaderboard-container">
-                <h3>🏆 TOP 10 GIOCATORI 🏆</h3>
-                <ul id="leaderboard-list">
-                    <li>Caricamento...</li>
-                </ul>
+    <div id="loading-screen">
+        <div class="loader-content">
+            <h1 class="loader-title">QUIXGOL</h1>
+            <div id="loading-bar-container">
+                <div id="loading-bar"></div>
             </div>
-
-            <button id="btn-retry" onclick="riavviaGioco()">🔄 RIPROVA</button>
+            <div id="loading-text">CARICAMENTO...</div>
+            <button id="start-game-btn" style="display:none;">GIOCA ORA</button>
         </div>
     </div>
+
+    <div id="main-layout">
+        
+        <div id="header-row">
+            <div class="hud-group left">
+                <div class="label-mini">LEVEL</div>
+                <div class="value-mini" id="ui-level">1</div>
+            </div>
+
+            <div id="logo-container">
+                <h2 style="margin:0; color:#00f3ff;">QUIXGOL</h2> 
+            </div>
+
+            <div class="hud-group right">
+                <div class="label-mini">LIVES</div>
+                <div class="value-mini" id="ui-lives">3</div>
+            </div>
+        </div>
+
+        <div id="game-row">
+            
+            <div class="side-col left-col">
+                <div class="hud-vertical">
+                    <div class="label-mini">AREA</div>
+                    <div class="value-big" id="ui-percent">0%</div>
+                </div>
+            </div>
+
+            <div id="game-wrapper">
+                <canvas id="imageCanvas"></canvas>
+                <canvas id="gridCanvas"></canvas>
+                <canvas id="entityCanvas"></canvas>
+                
+                <div id="next-level-container">
+                    <button id="next-level-btn">NEXT LEVEL >></button>
+                </div>
+
+                <div id="game-over-screen" class="hidden">
+                    <h1 id="end-title">GAME OVER</h1>
+                    <p class="final-score-text">Punteggio finale: <span id="final-score-val">0</span></p>
+                    
+                    <div id="input-section" class="hidden">
+                        <p style="color: yellow; font-size: 0.9em;">NUOVO RECORD! ENTRI IN TOP 10!</p>
+                        <input type="text" id="player-name" maxlength="8" placeholder="TUO NOME" />
+                        <button id="btn-save" onclick="salvaPunteggio()">SALVA</button>
+                    </div>
+
+                    <div id="leaderboard-container">
+                        <h3>🏆 TOP 10 🏆</h3>
+                        <ul id="leaderboard-list">
+                            <li>Caricamento...</li>
+                        </ul>
+                    </div>
+
+                    <button id="btn-retry" onclick="riavviaGioco()">🔄 RIPROVA</button>
+                </div>
+            </div>
+
+            <div class="side-col right-col">
+                <button id="music-btn" class="side-btn" title="Musica ON/OFF">🎵</button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="bg-music" loop>
+        <source src="music.mp3" type="audio/mp3"> 
+    </audio>
+    <audio id="gameover-sound">
+        <source src="gameover.mp3" type="audio/mp3">
+    </audio>
 
     <script src="script1.js"></script>
 </body>
