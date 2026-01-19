@@ -99,7 +99,7 @@ let audioCtx = new AudioContext();
 function preloadLevelImages() {
     for (let i = 1; i <= MAX_LEVEL; i++) {
         const img = new Image();
-        img.src = `img${i}.png`;
+        img.src = `img${i}.jpg`;
         levelImages[i] = img;
     }
 }
@@ -249,7 +249,7 @@ function initGame(lvl, resetLives = true){
 
     if(cameraLayer) cameraLayer.style.transform = 'translate(0px, 0px) scale(1)';
 
-    let imgSource = `img${level}.png`;
+    let imgSource = `img${level}.jpg`;
     currentBgImage = new Image();
     currentBgImage.src = imgSource;
     currentBgImage.onload = () => { redrawStaticLayers(); };
