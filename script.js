@@ -302,7 +302,7 @@ function initGame(lvl, resetLives = true){
     tryPlayMusic(); 
 
     if(level === 1) {
-        spawnFloatingText(generateMissionName(), W/2, H/2, 30, currentSkin.primary, 3500);
+        spawnFloatingText(generateMissionName(), W/2, H/2, 30, currentSkin.primary, 4500);
         spawnFloatingText(`SKIN: ${currentSkin.name}`, W/2, H/2 + 20, 16, '#888', 2000);
     }
     else if(level === 7) spawnFloatingText("FINAL STAGE!", W/2, H/2 - 10, 35, '#ff0000', 3000);
