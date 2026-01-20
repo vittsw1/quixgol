@@ -199,20 +199,18 @@ function redrawStaticLayers() {
 }
 
 // --- FIX PROPORZIONI IPHONE ---
+
 function resizeCanvases() {
-    // Calcoliamo manualmente le dimensioni per forzare il quadrato
-    // Ignoriamo parzialmente il CSS se necessario per essere precisi
     const winW = window.innerWidth;
     const winH = window.innerHeight;
     
-    // Logica: Prendi il 90% della larghezza o il 65% dell'altezza, quale è minore
-    // Questo assicura che il quadrato entri sempre
-    let size = Math.min(winW * 0.9, winH * 0.65);
+    // Calcola la dimensione ideale basata sullo spazio disponibile
+    // 90% della larghezza o 60% dell'altezza (lasciando spazio a HUD e bottoni)
+    let size = Math.min(winW * 0.9, winH * 0.60);
     
-    // Limite massimo desktop
-    if (size > 650) size = 650;
+    if (size > 650) size = 650; // Limite desktop
 
-    // Applichiamo la dimensione forzata al contenitore
+    // FORZA il wrapper a essere un quadrato perfetto in pixel
     gameWrapper.style.width = Math.floor(size) + "px";
     gameWrapper.style.height = Math.floor(size) + "px";
 
@@ -222,8 +220,8 @@ function resizeCanvases() {
         c.height = Math.floor(size * dpr);
     });
     
-    scaleX = imageCanvas.width / W;
-    scaleY = imageCanvas.height / H;
+    scaleX = (size * dpr) / W;
+    scaleY = (size * dpr) / H;
     
     redrawStaticLayers();
     if(isVictory) drawVictory(); 
@@ -827,26 +825,53 @@ async function gestisciFinePartita(vittoria) {
 }
 
 async function checkAndShowLeaderboard() {
-    leaderboardList.innerHTML = "<li>Caricamento dati...</li>"; inputSection.classList.add('hidden'); 
+    // 1. Reset visuale: mostra caricamento e nasconde input all'inizio
+    leaderboardList.innerHTML = "<li>Caricamento dati...</li>"; 
+    inputSection.classList.add('hidden'); 
+    inputSection.style.display = 'none'; // Sicurezza extra CSS
     
+    // --- CONTROLLO ANTI-TRUCCO ---
+    // Se hai usato i trucchi, ti mostra la classifica ma ti impedisce di salvare
     if (cheatDetected) {
-        leaderboardList.innerHTML = "<li>Punteggio non valido per la classifica (Cheat).</li>";
+        leaderboardList.innerHTML = "<li style='color: var(--danger)'>Punteggio non valido (Trucchi attivi).</li>";
         let { data: classifica } = await dbClient.from('classifica').select('*').order('punteggio', { ascending: false }).limit(10);
         disegnaLista(classifica);
-        return; 
+        return; // ESCE QUI: Non mostra l'input
     }
 
+    // 2. Scarica la classifica
     let { data: classifica, error } = await dbClient.from('classifica').select('*').order('punteggio', { ascending: false }).limit(10);
     
     if (error) { 
         console.error("Errore Supabase:", error); 
-        leaderboardList.innerHTML = "<li>Errore caricamento (Vedi Console).</li>"; return; 
+        leaderboardList.innerHTML = "<li>Errore caricamento dati.</li>"; 
+        return; 
     }
     
+    // 3. Calcola se entri in classifica
     let entraInClassifica = false;
-    if (classifica.length < 10) entraInClassifica = true; else if (score > classifica[9].punteggio) entraInClassifica = true;
+    
+    // Se ci sono meno di 10 record, entri di sicuro (purché score > 0)
+    if (classifica.length < 10) {
+        entraInClassifica = true;
+    } 
+    // Altrimenti, entri solo se hai battuto il 10° classificato
+    else if (score > classifica[9].punteggio) {
+        entraInClassifica = true;
+    }
+    
+    // Se hai fatto 0 punti, non entri mai
     if (score === 0) entraInClassifica = false;
-    if (entraInClassifica) inputSection.classList.remove('hidden');
+
+    // 4. MOSTRA L'INPUT (Logica rafforzata)
+    if (entraInClassifica) {
+        console.log("Nuovo Record! Mostro input."); // Debug in console
+        inputSection.classList.remove('hidden');
+        inputSection.style.display = 'block'; // Forza visualizzazione CSS
+    } else {
+        console.log("Niente record. Punteggio: " + score);
+    }
+
     disegnaLista(classifica);
 }
 
@@ -979,9 +1004,16 @@ window.addEventListener('load', () => { loadProgress = 90; });
 function onLoadComplete() {
     if(loadingText) { loadingText.innerText = "GIOCO CARICATO"; loadingText.style.color = "#00ff00"; }
     if(loadingBar) loadingBar.style.width = "100%";
+    
     setTimeout(() => {
         if(loadingBarContainer) loadingBarContainer.style.display = 'none';
-        if(startBtn) startBtn.style.display = 'inline-block';
+        
+        // CORREZIONE QUI: Rimuoviamo la classe 'hidden' invece di cambiare style.display
+        if(startBtn) {
+            startBtn.classList.remove('hidden');
+            // Aggiungiamo un'animazione di entrata opzionale
+            startBtn.style.animation = "pulseBtn 1s infinite alternate";
+        }
     }, 500);
 }
 

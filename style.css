@@ -4,26 +4,8 @@
     --bg: #050510;
 }
 
-
-
+/* --- SFONDO E LAYOUT GENERALE --- */
 body {
-    background-color: var(--bg); /* Colore di base scuro di fallback */
-    
-    /* Inserisci qui il nome del tuo file */
-    background-image: url('pattern.png'); 
-    
-    /* Fa sì che l'immagine si ripeta all'infinito */
-    background-repeat: repeat; 
-    
-    /* Mantiene lo sfondo fisso mentre la pagina/game si muove (opzionale) */
-    background-attachment: fixed; 
-    
-    /* Se il pattern ti sembra troppo grande o troppo piccolo, 
-       puoi regolarlo con questa riga (es. 100px, 200px o auto) */
-    background-size: 150px; 
-
-    color: white;
-    font-family: 'Orbitron', sans-serif;
     margin: 0;
     height: 100vh;
     width: 100vw;
@@ -34,8 +16,18 @@ body {
     overflow: hidden;
     touch-action: none;
     user-select: none;
-}
+    color: white;
+    font-family: 'Orbitron', sans-serif;
 
+    /* SFONDO: Pattern + Effetto Vignette (Scurisce verso i bordi) */
+    background-color: var(--bg);
+    background-image: 
+        radial-gradient(circle, rgba(5, 5, 16, 0.2) 0%, rgba(5, 5, 16, 0.9) 80%), 
+        url('pattern.png'); 
+    background-repeat: repeat;
+    background-attachment: fixed;
+    background-size: 150px; 
+}
 
 /* CONTENITORE PRINCIPALE */
 #main-layout {
@@ -75,19 +67,11 @@ body {
     min-width: 50px;
     padding-bottom: 5px;
 }
-.hud-group.left { text-align: right; }
-.hud-group.right { text-align: left; }
 
 .label-mini { font-size: 10px; color: #666; letter-spacing: 1px; margin-bottom: 2px;}
+.value-mini { font-family: 'Share Tech Mono', monospace; font-size: 20px; color: #fff; }
 
-.value-mini { 
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 20px; 
-    color: #fff; 
-    font-weight: normal; 
-}
-
-/* --- RIGA CENTRALE --- */
+/* --- GRIGLIA DI GIOCO --- */
 #game-row {
     display: flex;
     flex-direction: row;
@@ -101,386 +85,270 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     flex-shrink: 0;
 }
 
-.hud-vertical {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-}
 .value-big {
     font-family: 'Share Tech Mono', monospace;
     font-size: 28px;
     color: var(--primary);
     text-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
-    letter-spacing: 1px;
 }
 
-.side-btn {
-    background: transparent;
-    border: 2px solid #333;
-    color: #666;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    font-size: 22px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-.side-btn:hover, .side-btn:not(.off) {
-    border-color: var(--primary);
-    color: var(--primary);
-    box-shadow: 0 0 10px rgba(0,243,255,0.2);
-}
-.side-btn.off {
-    text-decoration: none;
-    opacity: 0.5;
-}
-
-
-
-/* --- QUADRATO DI GIOCO (FIX IPHONE) --- */
+/* --- IL QUADRATO DI GIOCO (FIX DEFINITIVO IPHONE) --- */
 #game-wrapper {
     position: relative;
     
-    /* USARE vmin: prende il 90% del lato più corto dello schermo. 
-       Garantisce che stia sempre dentro, sia in portrait che landscape */
-    width: 85vmin; 
-    height: 85vmin;
+    /* Forza il rapporto 1:1 */
+    aspect-ratio: 1 / 1; 
     
-    /* Limiti massimi per desktop */
+    /* Prende il 90% della larghezza o il 65% dell'altezza (quello che è minore) */
+    width: min(90vw, 65vh);
+    height: min(90vw, 65vh);
+    
     max-width: 650px;
     max-height: 650px;
     
-    /* IMPORTANTE: Impedisce a Flexbox di schiacciarlo verticalmente */
+    /* Evita che Safari o Flexbox lo schiaccino */
     flex-shrink: 0; 
     
     border: 2px solid var(--primary);
     box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
     background: #000;
     overflow: hidden; 
-    margin: 5px auto 10px auto; 
+    margin: 5px auto;
 }
 
-/* Su schermi molto stretti o corti, riduciamo un po' per lasciare spazio all'UI */
-@media (max-width: 768px) {
-    #game-wrapper {
-        width: 90vw; /* Su mobile usiamo la larghezza come riferimento */
-        height: 90vw; /* Forziamo l'altezza uguale alla larghezza */
-        max-height: 65vh; /* Ma non deve mai superare il 65% dell'altezza disponibile */
-        max-width: 65vh;  /* Idem per la larghezza */
-    }
-}
-
-
-
-
-/* NUOVO: Layer che contiene i canvas e viene trasformato (zoom/pan) */
+/* FIX PER LA VISIBILITÀ DI CANVAS E TELECAMERA */
 #camera-layer {
-    width: 100%;
-    height: 100%;
     position: absolute;
-    top: 0;
-    left: 0;
-    transform-origin: 0 0; /* Lo zoom parte dall'angolo in alto a sinistra per semplificare i calcoli */
-    will-change: transform; /* Ottimizzazione performance */
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    transform-origin: center center;
+    z-index: 1;
 }
 
 canvas {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    image-rendering: auto; 
-    display: block;
 }
 
-#imageCanvas { z-index: 1; }
-#gridCanvas { z-index: 2; }
-#entityCanvas { z-index: 3; }
-
-/* Pulsante Next Level */
+/* --- PULSANTI E UI --- */
 #next-level-container {
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     display: none;
     z-index: 100;
+    width: auto; 
 }
+
 #next-level-btn {
     background: var(--primary);
     color: var(--bg);
     border: 2px solid white;
-    padding: 15px 30px;
-    font-size: 15px;
+    padding: 12px 25px;
+    font-size: 16px;
     font-family: 'Orbitron', sans-serif;
     font-weight: bold;
     border-radius: 50px;
     cursor: pointer;
     box-shadow: 0 0 20px var(--primary);
+    white-space: nowrap; /* Evita che vada a capo */
     animation: pulseBtn 1s infinite alternate;
 }
-@keyframes pulseBtn { from {transform: scale(1);} to {transform: scale(1.1);} }
 
-
-/* --- MEDIA QUERY (Mobile / Tablet) --- */
-@media (max-width: 768px) {
-    
-    #header-row {
-        gap: 10px;
-        padding: 0 10px;
-        box-sizing: border-box;
-    }
-    
-    #game-logo {
-        max-height: 50px; 
-    }
-
-    #game-row {
-        flex-wrap: wrap; 
-        width: 100%;
-        justify-content: space-between; 
-        padding: 0 15px; 
-        box-sizing: border-box;
-    }
-
-    #game-wrapper {
-        order: 1;
-        width: 90vw;
-        height: 90vw;
-        margin: 10px auto 20px auto;
-    }
-
-    .side-col {
-        width: 45%; 
-        height: auto;
-        flex-direction: column;
-        margin-bottom: 20px;
-    }
-
-    .side-col.left-col {
-        order: 2;
-        align-items: flex-start;
-    }
-    
-    .side-col.left-col .hud-vertical {
-        align-items: flex-start;
-        width: auto;
-    }
-
-    .side-col.right-col {
-        order: 3;
-        align-items: flex-end;
-    }
-    
-    .value-big { font-size: 24px; }
-    
-    #next-level-btn {
-        font-size: 14px; 
-        padding: 10px 20px; 
-        white-space: nowrap; 
-        width: auto;
-        min-width: 120px;
-    }
-}
-
-/* --- MEDIA QUERY (Schermi molto bassi) --- */
-@media (max-height: 600px) {
-    #game-logo { max-height: 30px; }
-    #header-row { margin-bottom: 5px; }
-    .label-mini { display: none; } 
-    
-    #game-wrapper {
-        width: 65vh;
-        height: 65vh;
-    }
-}
-
-
-/* --- LOADING & OVERLAYS --- */
-#loading-screen {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    background-color: #020205;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.5s ease-out;
-}
-
-.loader-content {
-    text-align: center;
-    width: 80%;
-    max-width: 400px;
-}
-
-.loader-title {
-    font-size: 40px;
-    color: var(--primary);
-    text-shadow: 0 0 20px var(--primary);
-    margin-bottom: 30px;
-    letter-spacing: 5px;
-}
-
-#loading-text {
-    font-size: 14px;
-    color: #888;
-    margin-bottom: 15px;
-    font-family: monospace;
-    animation: blinkText 1s infinite alternate;
-}
-
-@keyframes blinkText { from { opacity: 0.4; } to { opacity: 1; } }
-
-#loading-bar-container {
-    width: 100%;
-    height: 4px;
-    background: #222;
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 30px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
-}
-
-#loading-bar {
-    width: 0%;
-    height: 100%;
-    background: var(--primary);
-    box-shadow: 0 0 10px var(--primary);
-    transition: width 0.5s ease-out;
-}
-
-#start-game-btn {
+.side-btn {
     background: transparent;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-    padding: 15px 40px;
-    font-size: 24px;
-    font-family: 'Orbitron', sans-serif;
-    font-weight: bold;
+    border: 2px solid #333;
+    color: #666;
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    font-size: 22px;
     cursor: pointer;
-    text-transform: uppercase;
-    box-shadow: 0 0 15px var(--primary), inset 0 0 10px rgba(0, 243, 255, 0.2);
-    transition: all 0.3s;
-    letter-spacing: 2px;
 }
 
-#start-game-btn:hover {
-    background: var(--primary);
-    color: #000;
-    box-shadow: 0 0 30px var(--primary);
-    transform: scale(1.05);
-}
-
-/* --- LEADERBOARD & GAME OVER --- */
-.hidden {
-    display: none !important;
-}
-
+/* --- SCHERMATA GAME OVER (FIX COMPATTEZZA E LAYOUT) --- */
 #game-over-screen {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 85%;
-    max-width: 350px;
-    background-color: rgba(0, 0, 0, 0.95);
-    border: 2px solid #00f3ff;
+    top: 0; left: 0;
+    width: 100%; height: 100%; /* Occupa tutto il quadrato */
+    
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.96);
+    border: 3px solid var(--primary);
     color: white;
-    padding: 20px;
+    padding: 15px;
     text-align: center;
-    border-radius: 10px;
-    box-shadow: 0 0 30px rgba(0, 243, 255, 0.3);
     z-index: 2000;
-    font-family: 'Orbitron', sans-serif;
+    
+    /* FLEXBOX VERTICALE */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
 }
 
 #end-title {
+    margin: 5px 0;
     font-size: 2em;
-    margin: 0 0 10px 0;
-    text-shadow: 0 0 10px currentColor;
+    color: var(--danger);
 }
 
 .final-score-text {
-    font-size: 1.2em;
-    margin-bottom: 20px;
+    margin: 0 0 10px 0;
+    font-size: 1.1em;
 }
 
 #final-score-val {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 1.4em;
+    font-size: 1.3em;
     color: var(--primary);
 }
 
+/* Input Nome compatto */
+#input-section {
+    flex-shrink: 0;
+    margin-bottom: 5px;
+}
+
 #player-name {
-    padding: 10px;
+    padding: 8px;
     font-size: 16px;
-    width: 60%;
-    text-transform: uppercase;
-    background: #222;
-    color: #00f3ff;
-    border: 1px solid #00f3ff;
-    border-radius: 5px;
-    margin-bottom: 10px;
-    font-family: 'Orbitron', sans-serif;
+    width: 70%;
+    background: #111;
+    color: var(--primary);
+    border: 1px solid var(--primary);
     text-align: center;
-}
-
-#btn-save, #btn-retry {
-    padding: 10px 20px;
-    font-size: 14px;
-    cursor: pointer;
-    background-color: #00f3ff;
-    color: black;
-    border: none;
-    font-weight: bold;
-    margin-top: 10px;
+    margin-bottom: 5px;
     font-family: 'Orbitron', sans-serif;
     text-transform: uppercase;
-    border-radius: 5px;
 }
 
-#btn-save:disabled {
-    background-color: #555;
-    cursor: wait;
-}
-
+/* Contenitore Classifica che scrolla */
 #leaderboard-container {
-    margin-top: 15px;
-    text-align: left;
-    max-height: 150px;
-    overflow-y: auto;
+    flex-grow: 1; /* Prende tutto lo spazio rimasto */
+    overflow-y: auto; /* Scrolla solo se necessario */
+    min-height: 0;
+    margin-top: 5px;
     border-top: 1px solid #333;
-    padding-top: 10px;
-    font-size: 0.9em;
-}
-
-#leaderboard-container h3 {
-    text-align: center;
-    margin-top: 0;
-    color: #ff0055; 
+    padding-top: 5px;
+    text-align: left;
 }
 
 #leaderboard-list {
     list-style: none;
-    padding: 0;
+    padding: 0; margin: 0;
 }
 
 #leaderboard-list li {
     display: flex;
     justify-content: space-between;
-    padding: 5px 0;
-    border-bottom: 1px dotted #333;
+    padding: 6px 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.9em;
 }
-#leaderboard-list li span:last-child {
-    font-family: 'Share Tech Mono', monospace;
+
+/* Colori Podio Classifica */
+#leaderboard-list li:nth-child(1) { color: #ffd700; font-weight: bold; text-shadow: 0 0 5px rgba(255,215,0,0.3); } 
+#leaderboard-list li:nth-child(2) { color: #c0c0c0; } 
+#leaderboard-list li:nth-child(3) { color: #cd7f32; } 
+
+#btn-save, #btn-retry {
+    padding: 10px 25px;
+    font-size: 14px;
+    background-color: var(--primary);
+    color: black;
+    border: none;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    text-transform: uppercase;
+    flex-shrink: 0; /* Non schiacciarti */
+    align-self: center;
 }
+
+#btn-retry {
+    margin-top: 10px;
+}
+
+#btn-save:disabled { background-color: #555; cursor: wait; }
+
+/* --- CONTROLLI MOBILE --- */
+#mobile-two-buttons {
+    display: none;
+    position: absolute;
+    bottom: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 150;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+.turn-btn {
+    pointer-events: auto;
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: rgba(0, 243, 255, 0.1);
+    border: 2px solid var(--primary);
+    color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(5px);
+    -webkit-tap-highlight-color: transparent;
+    font-size: 24px;
+}
+
+/* --- START BUTTON (Loading Screen) --- */
+#start-game-btn {
+    margin-top: 20px;
+    padding: 15px 40px;
+    font-size: 24px;
+    background-color: var(--primary);
+    color: #050510;
+    border: none;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    text-transform: uppercase;
+    box-shadow: 0 0 20px var(--primary);
+    transition: transform 0.2s;
+}
+#start-game-btn:hover { transform: scale(1.05); background-color: white; }
+
+@keyframes pulseBtn {
+    0% { box-shadow: 0 0 20px var(--primary); }
+    100% { box-shadow: 0 0 40px var(--primary); }
+}
+
+/* --- MEDIA QUERIES MOBILE --- */
+@media (max-width: 768px) {
+    #header-row { gap: 10px; padding: 0 10px; }
+    #game-logo { max-height: 50px; }
+    #game-row { flex-wrap: wrap; justify-content: space-between; padding: 0 10px; }
+    
+    .side-col { width: 48%; margin-bottom: 10px; }
+    .side-col.left-col { order: 2; align-items: flex-start; }
+    .side-col.right-col { order: 3; align-items: flex-end; }
+    
+    #game-wrapper { order: 1; margin: 5px auto 15px auto; }
+    #mobile-two-buttons { display: flex; }
+    
+    .value-big { font-size: 22px; }
+}
+
+/* --- LOADING SCREEN --- */
+#loading-screen {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: #020205; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+#loading-bar-container { width: 80%; height: 4px; background: #222; margin-bottom: 30px; }
+#loading-bar { width: 0%; height: 100%; background: var(--primary); transition: width 0.5s; }
+
+/* Classe helper */
+.hidden { display: none !important; }
