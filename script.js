@@ -1,4 +1,4 @@
-/* script.js - v3.4: SQUARE FIX, POWERUP SOUND & SPEED BOOST */
+/* script.js - v3.5: IPHONE ASPECT RATIO FIX & POWERUPS */
 
 // 1. SUPABASE
 const SUPABASE_URL = 'https://rhttiiwsouqnlwoqpcvb.supabase.co';
@@ -18,8 +18,8 @@ const POINTS_PER_FILL = 10;
 const POINTS_KILL_SPIDER = 500; 
 const POINTS_KILL_EVIL = 1000;  
 
-// NUOVO: Boost velocità per ogni nemico ucciso
-const SPEED_BOOST_PER_KILL = 0.2; // +20% velocità
+// BONUS VELOCITÀ
+const SPEED_BOOST_PER_KILL = 0.25; // +25% velocità per ogni nemico ucciso
 
 // Configurazione ZOOM Mobile
 const MOBILE_ZOOM_LEVEL = 1.15; 
@@ -91,8 +91,8 @@ let evilPlayers = [];
 let cheatBuffer = "";
 let isGodMode = false;
 let cheatDetected = false; 
-let playerSpeedMult = 1.0; // Moltiplicatore velocità base
-let moveAccumulator = 0;   // Accumulatore per movimenti frazionari
+let playerSpeedMult = 1.0; 
+let moveAccumulator = 0;   
 
 // Contexts
 let imgCtx = imageCanvas.getContext('2d', { alpha: false }); 
@@ -102,7 +102,6 @@ let entCtx = entityCanvas.getContext('2d');
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = new AudioContext();
 
-// --- PRELOADING ---
 function preloadLevelImages() {
     for (let i = 1; i <= MAX_LEVEL; i++) {
         const img = new Image();
@@ -133,13 +132,23 @@ function playSound(type) {
         gainNode.gain.setValueAtTime(0.2, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.6);
         osc.start(now); osc.stop(now + 0.6);
     } else if (type === 'kill') {
-        // SUONO POWERUP: Onda sinusoidale che sale di frequenza (Powerup sound)
+        // SUONO POWERUP: Tono alto e cristallino (tipo moneta/bonus)
         osc.type = 'sine'; 
-        osc.frequency.setValueAtTime(300, now); 
-        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3); // Sale veloce
-        gainNode.gain.setValueAtTime(0.4, now); 
-        gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
-        osc.start(now); osc.stop(now + 0.3);
+        osc.frequency.setValueAtTime(600, now); 
+        osc.frequency.linearRampToValueAtTime(1200, now + 0.15); // Sale veloce
+        gainNode.gain.setValueAtTime(0.3, now); 
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
+        osc.start(now); osc.stop(now + 0.4);
+        
+        // Aggiungiamo un secondo oscillatore per l'effetto "magico"
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.connect(gain2); gain2.connect(audioCtx.destination);
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(900, now);
+        osc2.frequency.linearRampToValueAtTime(1800, now + 0.15);
+        gain2.gain.setValueAtTime(0.1, now); gain2.gain.linearRampToValueAtTime(0, now + 0.4);
+        osc2.start(now); osc2.stop(now + 0.4);
     }
 }
 
@@ -163,13 +172,10 @@ if(musicBtn) {
     });
 }
 
-// --- GRAFICA STATIC LAYERS ---
 function redrawStaticLayers() {
     if (!currentBgImage) return;
-    
     imgCtx.drawImage(currentBgImage, 0, 0, imageCanvas.width, imageCanvas.height);
     gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-    
     gridCtx.drawImage(currentBgImage, 0, 0, gridCanvas.width, gridCanvas.height);
     gridCtx.save();
     gridCtx.fillStyle = 'rgba(0, 0, 0, 0.85)'; 
@@ -192,15 +198,33 @@ function redrawStaticLayers() {
     gridCtx.globalCompositeOperation = 'source-over'; 
 }
 
+// --- FIX PROPORZIONI IPHONE ---
 function resizeCanvases() {
-    const rect = gameWrapper.getBoundingClientRect();
+    // Calcoliamo manualmente le dimensioni per forzare il quadrato
+    // Ignoriamo parzialmente il CSS se necessario per essere precisi
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+    
+    // Logica: Prendi il 90% della larghezza o il 65% dell'altezza, quale è minore
+    // Questo assicura che il quadrato entri sempre
+    let size = Math.min(winW * 0.9, winH * 0.65);
+    
+    // Limite massimo desktop
+    if (size > 650) size = 650;
+
+    // Applichiamo la dimensione forzata al contenitore
+    gameWrapper.style.width = Math.floor(size) + "px";
+    gameWrapper.style.height = Math.floor(size) + "px";
+
     const dpr = window.devicePixelRatio || 1;
     [imageCanvas, gridCanvas, entityCanvas].forEach(c => {
-        c.width = Math.floor(rect.width * dpr);
-        c.height = Math.floor(rect.height * dpr);
+        c.width = Math.floor(size * dpr);
+        c.height = Math.floor(size * dpr);
     });
+    
     scaleX = imageCanvas.width / W;
     scaleY = imageCanvas.height / H;
+    
     redrawStaticLayers();
     if(isVictory) drawVictory(); 
 }
@@ -253,7 +277,6 @@ function initGame(lvl, resetLives = true){
         cheatDetected = false; 
     }
     
-    // RESET VELOCITÀ A INIZIO LIVELLO/PARTITA
     playerSpeedMult = 1.0;
     moveAccumulator = 0;
 
@@ -282,7 +305,6 @@ function initGame(lvl, resetLives = true){
     player.drawing = false; 
     player.dir = {x:0,y:0}; 
     
-    // GENERAZIONE NEMICI
     qixList = [];
     evilPlayers = []; 
 
@@ -489,14 +511,6 @@ function draw() {
     }
 }
 
-function drawVictory() {
-    entCtx.clearRect(0,0,entityCanvas.width,entityCanvas.height);
-    entCtx.save(); entCtx.fillStyle = '#00ff00'; entCtx.shadowColor = '#00ff00'; entCtx.shadowBlur = 30;
-    let fontSize = Math.min(imageCanvas.width, imageCanvas.height) / 8;
-    entCtx.font = `bold ${fontSize}px 'Orbitron', sans-serif`; entCtx.textAlign = 'center'; entCtx.textBaseline = 'middle';
-    entCtx.fillText("YOU WIN!!", imageCanvas.width/2, imageCanvas.height/2); entCtx.restore();
-}
-
 function closeStixAndFill(){
     if(stixList.length===0) return;
 
@@ -567,10 +581,9 @@ function closeStixAndFill(){
 
     stixList = []; 
 
-    // CONTROLLO UCCISIONE NEMICI & BOOST VELOCITÀ
     let killed = false;
 
-    // Ragni
+    // RAGNI
     for (let i = qixList.length - 1; i >= 0; i--) {
         let q = qixList[i];
         let qIdx = idx(Math.floor(q.x), Math.floor(q.y));
@@ -582,13 +595,13 @@ function closeStixAndFill(){
             spawnFloatingText("ENEMY KILLED!", q.x, q.y, 20, '#ff0000');
             spawnFloatingText("SPEED UP!", q.x, q.y + 20, 20, '#00ffff', 2000);
             
-            // SPEED BOOST
+            // BOOST VELOCITÀ
             playerSpeedMult += SPEED_BOOST_PER_KILL;
             killed = true;
         }
     }
 
-    // Palle Nemiche
+    // PALLE NEMICHE
     for (let i = evilPlayers.length - 1; i >= 0; i--) {
         let ep = evilPlayers[i];
         let epIdx = idx(Math.floor(ep.x), Math.floor(ep.y));
@@ -600,7 +613,7 @@ function closeStixAndFill(){
             spawnFloatingText("RIVAL ELIMINATED!", ep.x, ep.y, 20, '#ff0000');
             spawnFloatingText("SPEED UP!", ep.x, ep.y + 20, 20, '#00ffff', 2000);
 
-            // SPEED BOOST
+            // BOOST VELOCITÀ
             playerSpeedMult += SPEED_BOOST_PER_KILL;
             killed = true;
         }
@@ -667,7 +680,6 @@ function resetAfterDeath(){
         stixList = []; player.drawing = false; player.dir = {x:0,y:0}; player.x = Math.floor(W/2); player.y = H-1;
         playerAnimScale = 0; 
         
-        // RESET VELOCITÀ SU MORTE
         playerSpeedMult = 1.0; 
         moveAccumulator = 0;
 
@@ -765,7 +777,6 @@ function tickPlayer(){
     if(player.drawing && nextType===CELL_CLAIMED){
         player.x = nx; player.y = ny; const filled = closeStixAndFill(); player.drawing = false; 
         updateUI(); 
-        // CONTROLLO VITTORIA AGGIORNATO (Percentuale o 0 nemici è gestito in closeStixAndFill)
         return;
     }
     if(player.drawing){ 
@@ -792,16 +803,13 @@ function gameLoop(now){
         moveQix(); 
         
         // --- LOGICA VELOCITÀ AUMENTATA (Accumulatore) ---
-        moveAccumulator += (1 * playerSpeedMult); // Incrementa in base alla velocità
+        moveAccumulator += (1 * playerSpeedMult); 
         
-        // Esegue il movimento tante volte quanto accumulato
-        // Es: se speed è 1.5, ogni 2 frame farà 2 passi invece di 1
         while (moveAccumulator >= 1) {
             tickPlayer();
-            checkCollisions(); // Controlla collisioni ad ogni micro-passo
+            checkCollisions(); 
             moveAccumulator -= 1;
             
-            // Se muore durante i passi multipli, ferma tutto
             if(isDying || isVictory) break; 
         }
     }

@@ -128,27 +128,39 @@ body {
 }
 
 
-/* --- QUADRATO DI GIOCO --- */
+
+/* --- QUADRATO DI GIOCO (FIX IPHONE) --- */
 #game-wrapper {
     position: relative;
-    /* FIX IPHONE: Usa aspect-ratio per forzare il quadrato perfetto */
-    aspect-ratio: 1 / 1;
     
-    /* La dimensione è il minimo tra il 90% della larghezza o il 65% dell'altezza */
-    width: min(90vw, 65vh);
-    height: auto; /* L'altezza si calcola in automatico grazie ad aspect-ratio */
+    /* USARE vmin: prende il 90% del lato più corto dello schermo. 
+       Garantisce che stia sempre dentro, sia in portrait che landscape */
+    width: 85vmin; 
+    height: 85vmin;
     
-    max-width: 800px;
+    /* Limiti massimi per desktop */
+    max-width: 650px;
+    max-height: 650px;
+    
+    /* IMPORTANTE: Impedisce a Flexbox di schiacciarlo verticalmente */
+    flex-shrink: 0; 
+    
     border: 2px solid var(--primary);
     box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
     background: #000;
     overflow: hidden; 
-    margin: 10px auto 20px auto; /* Centratura */
+    margin: 5px auto 10px auto; 
 }
 
-
-
-
+/* Su schermi molto stretti o corti, riduciamo un po' per lasciare spazio all'UI */
+@media (max-width: 768px) {
+    #game-wrapper {
+        width: 90vw; /* Su mobile usiamo la larghezza come riferimento */
+        height: 90vw; /* Forziamo l'altezza uguale alla larghezza */
+        max-height: 65vh; /* Ma non deve mai superare il 65% dell'altezza disponibile */
+        max-width: 65vh;  /* Idem per la larghezza */
+    }
+}
 
 
 
