@@ -1,4 +1,4 @@
-/* script.js - v3.5: IPHONE ASPECT RATIO FIX & POWERUPS */
+/* script.js - v4.0: INFINITE LEVELS & PROGRESSIVE DIFFICULTY */
 
 // 1. SUPABASE
 const SUPABASE_URL = 'https://rhttiiwsouqnlwoqpcvb.supabase.co';
@@ -10,7 +10,9 @@ const W = 160; const H = 160;
 const PLAYER_SPEED_CELLS = 1; 
 const WIN_PERCENT = 75;
 const START_LIVES = 3;
-const MAX_LEVEL = 10; 
+
+// MODIFICA: Immagini totali disponibili (1-100)
+const TOTAL_IMAGES = 100; 
 
 const POINTS_PER_LEVEL = 1000; 
 const MAX_TIME_BONUS = 500;     
@@ -19,7 +21,7 @@ const POINTS_KILL_SPIDER = 500;
 const POINTS_KILL_EVIL = 1000;  
 
 // BONUS VELOCITÀ
-const SPEED_BOOST_PER_KILL = 0.25; // +25% velocità per ogni nemico ucciso
+const SPEED_BOOST_PER_KILL = 0.25; 
 
 // Configurazione ZOOM Mobile
 const MOBILE_ZOOM_LEVEL = 1.15; 
@@ -103,7 +105,8 @@ const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = new AudioContext();
 
 function preloadLevelImages() {
-    for (let i = 1; i <= MAX_LEVEL; i++) {
+    // MODIFICA: Carica fino a TOTAL_IMAGES (100)
+    for (let i = 1; i <= TOTAL_IMAGES; i++) {
         const img = new Image();
         img.src = `img${i}.jpg`; 
         levelImages[i] = img;
@@ -132,21 +135,12 @@ function playSound(type) {
         gainNode.gain.setValueAtTime(0.2, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.6);
         osc.start(now); osc.stop(now + 0.6);
     } else if (type === 'kill') {
-        // SUONO POWERUP: Tono alto e cristallino (tipo moneta/bonus)
-        osc.type = 'sine'; 
-        osc.frequency.setValueAtTime(600, now); 
-        osc.frequency.linearRampToValueAtTime(1200, now + 0.15); // Sale veloce
-        gainNode.gain.setValueAtTime(0.3, now); 
-        gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
+        osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.linearRampToValueAtTime(1200, now + 0.15); 
+        gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
         osc.start(now); osc.stop(now + 0.4);
-        
-        // Aggiungiamo un secondo oscillatore per l'effetto "magico"
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
+        const osc2 = audioCtx.createOscillator(); const gain2 = audioCtx.createGain();
         osc2.connect(gain2); gain2.connect(audioCtx.destination);
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(900, now);
-        osc2.frequency.linearRampToValueAtTime(1800, now + 0.15);
+        osc2.type = 'triangle'; osc2.frequency.setValueAtTime(900, now); osc2.frequency.linearRampToValueAtTime(1800, now + 0.15);
         gain2.gain.setValueAtTime(0.1, now); gain2.gain.linearRampToValueAtTime(0, now + 0.4);
         osc2.start(now); osc2.stop(now + 0.4);
     }
@@ -198,21 +192,12 @@ function redrawStaticLayers() {
     gridCtx.globalCompositeOperation = 'source-over'; 
 }
 
-// --- FIX PROPORZIONI IPHONE ---
 function resizeCanvases() {
-    // Calcoliamo manualmente le dimensioni per forzare il quadrato
-    // Ignoriamo parzialmente il CSS se necessario per essere precisi
     const winW = window.innerWidth;
     const winH = window.innerHeight;
-    
-    // Logica: Prendi il 90% della larghezza o il 65% dell'altezza, quale è minore
-    // Questo assicura che il quadrato entri sempre
     let size = Math.min(winW * 0.9, winH * 0.65);
-    
-    // Limite massimo desktop
     if (size > 650) size = 650;
 
-    // Applichiamo la dimensione forzata al contenitore
     gameWrapper.style.width = Math.floor(size) + "px";
     gameWrapper.style.height = Math.floor(size) + "px";
 
@@ -224,7 +209,6 @@ function resizeCanvases() {
     
     scaleX = imageCanvas.width / W;
     scaleY = imageCanvas.height / H;
-    
     redrawStaticLayers();
     if(isVictory) drawVictory(); 
 }
@@ -258,13 +242,14 @@ function initGame(lvl, resetLives = true){
     if(gameOverScreen) gameOverScreen.classList.add('hidden');
     level = lvl;
 
+    // Gestione Musica
     if (bgMusic) {
-        let nuovaMusica = (level >= 5) ? 'part2.mp3' : 'soundtrack.mp3';
+        let nuovaMusica = (level % 10 >= 5) ? 'part2.mp3' : 'soundtrack.mp3';
         if (!bgMusic.src.includes(nuovaMusica)) {
             bgMusic.src = nuovaMusica;
             bgMusic.load();
             if (isMusicOn) {
-                bgMusic.play().catch(e => console.log("Errore riproduzione musica:", e));
+                bgMusic.play().catch(e => console.log("Errore musica:", e));
             }
         }
     }
@@ -290,12 +275,15 @@ function initGame(lvl, resetLives = true){
 
     if(cameraLayer) cameraLayer.style.transform = 'translate(0px, 0px) scale(1)';
 
-    let imgSource = `img${level}.jpg`;
+    // --- IMMAGINI INFINITE (Rotazione 1-100) ---
+    let imgIndex = ((level - 1) % TOTAL_IMAGES) + 1;
+    let imgSource = `img${imgIndex}.jpg`;
+
     currentBgImage = new Image();
     currentBgImage.src = imgSource;
     currentBgImage.onload = () => { redrawStaticLayers(); };
     currentBgImage.onerror = () => { 
-        currentBgImage.src = `img${level}.png`; 
+        currentBgImage.src = `img${imgIndex}.png`; 
         currentBgImage.onload = () => redrawStaticLayers();
     };
 
@@ -308,23 +296,32 @@ function initGame(lvl, resetLives = true){
     qixList = [];
     evilPlayers = []; 
 
-    let numSpiders = 1;
-    if (level >= 8) numSpiders = 4; else if (level >= 7) numSpiders = 3; else if (level >= 5) numSpiders = 2; 
+    // --- DIFFICOLTÀ DINAMICA INFINITA ---
+    
+    // Ragni: Aumentano ogni 3 livelli. Min 1, Max 15.
+    let numSpiders = Math.min(15, 1 + Math.floor((level - 1) / 3));
 
     for(let i=0; i<numSpiders; i++) {
         let startX = Math.floor(W * 0.3) + (i * 20);
         let startY = Math.floor(H * 0.3) + (i * 10);
         if(startX >= W-2) startX = W-10; if(startY >= H-2) startY = H-10;
+        
+        // Velocità base aumenta leggermente coi livelli
+        let baseSpeed = 0.4 + (level * 0.02);
+
         qixList.push({
             x: startX, y: startY,
-            vx: (Math.random() * 0.8 + 0.4) * (Math.random() < 0.5 ? -1 : 1),
-            vy: (Math.random() * 0.8 + 0.4) * (Math.random() < 0.5 ? -1 : 1)
+            vx: (Math.random() * 0.8 + baseSpeed) * (Math.random() < 0.5 ? -1 : 1),
+            vy: (Math.random() * 0.8 + baseSpeed) * (Math.random() < 0.5 ? -1 : 1)
         });
     }
 
+    // Palle Malvagie: 0 fino al livello 8, poi aumentano ogni 5 livelli (max 5)
     let numEvilBalls = 0;
-    if (level === 9) numEvilBalls = 1;
-    if (level === 10) numEvilBalls = 2;
+    if (level >= 9) {
+        numEvilBalls = 1 + Math.floor((level - 9) / 5);
+        if (numEvilBalls > 5) numEvilBalls = 5;
+    }
 
     for (let i = 0; i < numEvilBalls; i++) {
         let ex = Math.floor(W/2) + (Math.random() > 0.5 ? 40 : -40);
@@ -345,13 +342,11 @@ function initGame(lvl, resetLives = true){
         spawnFloatingText(generateMissionName(), W/2, H/2, 30, currentSkin.primary, 2500);
         spawnFloatingText(`SKIN: ${currentSkin.name}`, W/2, H/2 + 20, 16, '#888', 2000);
     }
-    else if(level === 7) spawnFloatingText("FINAL STAGE!", W/2, H/2 - 10, 35, '#ff0000', 3000);
-    else if (level === 9) {
-        spawnFloatingText("WARNING:", W/2, H/2 - 15, 30, '#ff0000', 3000);
-        spawnFloatingText("EVIL PLAYER DETECTED", W/2, H/2 + 10, 20, '#ffaa00', 3000);
-    }
-    else if (level === 10) {
+    else if (level % 10 === 0) {
         spawnFloatingText("BOSS BATTLE", W/2, H/2, 40, '#ff0000', 4000);
+    }
+    else {
+        spawnFloatingText(`LEVEL ${level}`, W/2, H/2, 30, '#ffffff', 2000);
     }
 
     requestAnimationFrame(gameLoop);
@@ -530,7 +525,6 @@ function closeStixAndFill(){
             while (stack.length > 0) {
                 let curr = stack.pop();
                 currentArea.push(curr);
-                
                 let cx = curr % W;
                 let cy = Math.floor(curr / W);
 
@@ -552,7 +546,6 @@ function closeStixAndFill(){
     }
 
     if (areas.length === 0) return 0; 
-
     areas.sort((a, b) => b.length - a.length);
 
     let mainArea = areas[0]; 
@@ -580,7 +573,6 @@ function closeStixAndFill(){
     gridCtx.globalCompositeOperation = 'source-over'; 
 
     stixList = []; 
-
     let killed = false;
 
     // RAGNI
@@ -594,8 +586,6 @@ function closeStixAndFill(){
             score += POINTS_KILL_SPIDER;
             spawnFloatingText("ENEMY KILLED!", q.x, q.y, 20, '#ff0000');
             spawnFloatingText("SPEED UP!", q.x, q.y + 20, 20, '#00ffff', 2000);
-            
-            // BOOST VELOCITÀ
             playerSpeedMult += SPEED_BOOST_PER_KILL;
             killed = true;
         }
@@ -612,8 +602,6 @@ function closeStixAndFill(){
             score += POINTS_KILL_EVIL;
             spawnFloatingText("RIVAL ELIMINATED!", ep.x, ep.y, 20, '#ff0000');
             spawnFloatingText("SPEED UP!", ep.x, ep.y + 20, 20, '#00ffff', 2000);
-
-            // BOOST VELOCITÀ
             playerSpeedMult += SPEED_BOOST_PER_KILL;
             killed = true;
         }
@@ -680,28 +668,31 @@ function resetAfterDeath(){
         stixList = []; player.drawing = false; player.dir = {x:0,y:0}; player.x = Math.floor(W/2); player.y = H-1;
         playerAnimScale = 0; 
         
-        playerSpeedMult = 1.0; 
+        playerSpeedMult = 2.0; 
         moveAccumulator = 0;
 
         qixList = []; 
-        let numSpiders = 1;
-        if (level >= 8) numSpiders = 4; else if (level >= 7) numSpiders = 3; else if (level >= 5) numSpiders = 2; 
+        
+        // Rigenera nemici con logica infinita
+        let numSpiders = Math.min(15, 1 + Math.floor((level - 1) / 3));
 
         for(let i=0; i<numSpiders; i++) {
             let startX = Math.floor(W * 0.3) + (i * 20); let startY = Math.floor(H * 0.3) + (i * 10);
             if(startX >= W-2) startX = W-10; if(startY >= H-2) startY = H-10;
+            let baseSpeed = 0.4 + (level * 0.02);
             qixList.push({
                 x: startX, y: startY,
-                vx: (Math.random() * 0.8 + 0.4) * (Math.random() < 0.5 ? -1 : 1),
-                vy: (Math.random() * 0.8 + 0.4) * (Math.random() < 0.5 ? -1 : 1)
+                vx: (Math.random() * 0.8 + baseSpeed) * (Math.random() < 0.5 ? -1 : 1),
+                vy: (Math.random() * 0.8 + baseSpeed) * (Math.random() < 0.5 ? -1 : 1)
             });
         }
         
-
         evilPlayers = [];
         let numEvilBalls = 0;
-        if (level === 9) numEvilBalls = 1;
-        if (level === 10) numEvilBalls = 2;
+        if (level >= 9) {
+            numEvilBalls = 1 + Math.floor((level - 9) / 5);
+            if (numEvilBalls > 5) numEvilBalls = 5; 
+        }
 
         for (let i = 0; i < numEvilBalls; i++) {
             let ex = Math.floor(W/2) + (Math.random() > 0.5 ? 40 : -40);
@@ -725,58 +716,18 @@ function resetAfterDeath(){
     }
 }
 
-
-
-
-
-
-// AGGIUNGI QUESTA FUNZIONE CHE MANCAVA
 function drawVictory() {
     entCtx.save();
     entCtx.clearRect(0, 0, entityCanvas.width, entityCanvas.height);
-    
-    // Sfondo scuro semitrasparente per risaltare il testo
     entCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     entCtx.fillRect(0, 0, entityCanvas.width, entityCanvas.height);
-
-    // Scritta "YOU WIN" o "MISSION COMPLETE"
     let fontSize = Math.floor(Math.min(entityCanvas.width, entityCanvas.height) / 5);
     entCtx.font = `bold ${fontSize}px 'Orbitron', sans-serif`;
-    entCtx.textAlign = 'center';
-    entCtx.textBaseline = 'middle';
-    
-    // Effetto Neon
-    entCtx.fillStyle = '#00ff00';
-    entCtx.shadowColor = '#ffffff';
-    entCtx.shadowBlur = 30;
-    
+    entCtx.textAlign = 'center'; entCtx.textBaseline = 'middle';
+    entCtx.fillStyle = '#00ff00'; entCtx.shadowColor = '#ffffff'; entCtx.shadowBlur = 30;
     entCtx.fillText("VICTORY!", entityCanvas.width / 2, entityCanvas.height / 2);
     entCtx.restore();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function moveQix(){
     for (let q of qixList) {
@@ -785,7 +736,10 @@ function moveQix(){
         if(!inBounds(Math.floor(q.x), Math.floor(ny)) || grid[idx(Math.floor(q.x), Math.floor(ny))]===CELL_CLAIMED) q.vy *= -1;
         q.x += q.vx; q.y += q.vy; spawnParticles(q.x, q.y, 'spider');
         if(Math.random() < 0.02) { q.vx += (Math.random() - 0.5) * 1.5; q.vy += (Math.random() - 0.5) * 1.5; }
-        const difficultyMultiplier = 1 + ((level - 1) * 0.1); const maxSpeed = 1.2 * difficultyMultiplier; 
+        
+        // MODIFICA: Difficoltà e Cap Velocità
+        const difficultyMultiplier = Math.min(3.0, 1 + ((level - 1) * 0.05)); 
+        const maxSpeed = 1.5 * difficultyMultiplier; 
         const s = Math.hypot(q.vx, q.vy); if(s > maxSpeed){ q.vx *= maxSpeed/s; q.vy *= maxSpeed/s; }
     }
     
@@ -795,7 +749,8 @@ function moveQix(){
         if(!inBounds(Math.floor(ep.x), Math.floor(ny)) || grid[idx(Math.floor(ep.x), Math.floor(ny))]===CELL_CLAIMED) ep.vy *= -1;
         ep.x += ep.vx; ep.y += ep.vy; 
         if(Math.random() < 0.02) { ep.vx += (Math.random() - 0.5) * 1.5; ep.vy += (Math.random() - 0.5) * 1.5; }
-        const maxSpeed = 1.4; 
+        
+        const maxSpeed = 1.4 + (level * 0.05); 
         const s = Math.hypot(ep.vx, ep.vy); if(s > maxSpeed){ ep.vx *= maxSpeed/s; ep.vy *= maxSpeed/s; }
     }
 }
@@ -811,11 +766,14 @@ function winLevel() {
     
     flashList = []; particles = []; floatingTexts = [];
     draw(); gameWrapper.style.cursor = 'default'; 
-    if (level >= MAX_LEVEL) {
-        isVictory = true; drawVictory(); 
-        setTimeout(() => { gestisciFinePartita(true); }, 2000);
-    } else {
-        if(nextLevelContainer) nextLevelContainer.style.display = 'block'; 
+
+    // MODIFICA: Sempre livello successivo, niente fine gioco
+    if(nextLevelContainer) {
+        nextLevelContainer.style.display = 'block'; 
+        // Opzionale: mostra messaggio speciale ogni giro di immagini completato
+        if (level % TOTAL_IMAGES === 0) {
+           spawnFloatingText("CYCLE COMPLETE!", W/2, H/2, 40, '#ffd700', 5000);
+        }
     }
 }
 
@@ -856,7 +814,6 @@ function gameLoop(now){
     if (!isDying && !isVictory) { 
         moveQix(); 
         
-        // --- LOGICA VELOCITÀ AUMENTATA (Accumulatore) ---
         moveAccumulator += (1 * playerSpeedMult); 
         
         while (moveAccumulator >= 1) {
@@ -875,6 +832,7 @@ function gameLoop(now){
 async function gestisciFinePartita(vittoria) {
     if(!gameOverScreen) { alert("GAME OVER! Punteggio: " + score); window.location.reload(); return; }
     gameOverScreen.classList.remove('hidden'); finalScoreVal.innerText = score;
+    // Se si muore, si muore (ma teoricamente non si vince mai definitivamente ora)
     if (vittoria) { endTitle.innerText = "HAI VINTO!"; endTitle.style.color = "#00ff00"; } 
     else { endTitle.innerText = "GAME OVER"; endTitle.style.color = "red"; }
     await checkAndShowLeaderboard();
@@ -883,13 +841,6 @@ async function gestisciFinePartita(vittoria) {
 async function checkAndShowLeaderboard() {
     leaderboardList.innerHTML = "<li>Caricamento dati...</li>"; inputSection.classList.add('hidden'); 
     
-   // if (cheatDetected) {
-     //   leaderboardList.innerHTML = "<li>Punteggio non valido per la classifica (Cheat).</li>";
-     //   let { data: classifica } = await dbClient.from('classifica').select('*').order('punteggio', { ascending: false }).limit(10);
-      //  disegnaLista(classifica);
-     //   return; 
-   // }
-
     let { data: classifica, error } = await dbClient.from('classifica').select('*').order('punteggio', { ascending: false }).limit(10);
     
     if (error) { 
@@ -915,8 +866,6 @@ function disegnaLista(data) {
 }
 
 window.salvaPunteggio = async function() {
- //   if (cheatDetected) { alert("Non puoi salvare il punteggio usando i trucchi!"); return; }
-
     const nome = playerNameInput.value.trim();
     if (nome.length === 0 || nome.length > 8) { alert("Inserisci un nome valido (1-8 caratteri)"); return; }
     const btn = document.getElementById('btn-save'); if(btn) { btn.disabled = true; btn.innerText = "Salvataggio..."; }
@@ -981,9 +930,9 @@ function handleMobileTurn(direction) {
     if (oldDir.x === 0 && oldDir.y === 0) {
          newDir = {x: 0, y: -1}; 
     } else {
-        if (direction === 'right') { // ORARIO (CW)
+        if (direction === 'right') { 
             newDir = { x: -oldDir.y, y: oldDir.x };
-        } else { // ANTIORARIO (CCW)
+        } else { 
             newDir = { x: oldDir.y, y: -oldDir.x };
         }
     }
